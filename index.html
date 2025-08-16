@@ -111,28 +111,7 @@
 
             redraw();
 
-            svg.call(
-              d3.drag().on("drag", (event) => {
-                const rotate = projection.rotate();
-                const k = 1 / projection.scale();
-                projection.rotate([
-                  rotate[0] + event.dx * k * 150,
-                  rotate[1] - event.dy * k * 150,
-                ]);
-                redraw();
-              })
-            );
-
-            svg.call(
-              d3
-                .zoom()
-                .scaleExtent([200, 800])
-                .on("zoom", (event) => {
-                  projection.scale(event.transform.k);
-                  redraw();
-                })
-            );
-
+            // Interaktivitas dihapus, hanya loop otomatis
             loopSequence();
           }
         );
@@ -194,7 +173,6 @@
             paths.exit().remove();
           }
 
-          // Hitung posisi akurat dengan SVGPoint + getScreenCTM
           const point = svg.node().createSVGPoint();
           const coord = projection([104.947022, -4.899062]);
           if (coord) {
