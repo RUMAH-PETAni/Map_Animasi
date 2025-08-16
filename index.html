@@ -1,174 +1,264 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Peta Interaktif & Zoom Otomatis • D3</title>
-  <style>
-    html, body { height: 100%; margin: 0; background: #ffffff; }
-    #map-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
-    svg { width: 100%; height: 100%; display: block; }
-    .lampung-label {
-      position: absolute;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 16px;
-      color: black;
-      display: none;
-      white-space: nowrap;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-    }
-  </style>
-  <!-- D3 & TopoJSON via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
-</head>
-<body>
-  <div id="map-container">
-    <svg id="map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet"></svg>
-    <div id="lampung-label" class="lampung-label">Lampung, Indonesia</div>
-  </div>
-
-  <script>
-  (function(){
-    const svg = d3.select('#map');
-    const g = svg.append('g');
-
-    const width = 960, height = 600;
-
-    const projection = d3.geoOrthographic()
-      .translate([width/2, height/2])
-      .scale(280)
-      .clipAngle(90);
-
-    const path = d3.geoPath(projection);
-
-    const land110mUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json';
-    const countries110mUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-
-    const layerLand  = g.append('path').attr('fill', '#69d2e7').attr('stroke', '#333').attr('stroke-width', 0.5);
-    const layerBorders = g.append('path').attr('fill','none').attr('stroke','white').attr('stroke-width',0.5);
-    const graticule = d3.geoGraticule10();
-    const layerGraticule = g.append('path').datum(graticule).attr('fill','none').attr('stroke','#aaa').attr('stroke-width',0.5).attr('stroke-opacity',0.5);
-    const layerCountries = g.append('g');
-
-    let landFeature, bordersFeature, countries;
-    const lampungLabel = document.getElementById('lampung-label');
-
-    Promise.all([
-      d3.json(land110mUrl),
-      d3.json(countries110mUrl)
-    ]).then(([land110m, countries110m]) => {
-      landFeature = topojson.feature(land110m, land110m.objects.land);
-      bordersFeature = topojson.mesh(countries110m, countries110m.objects.countries, (a,b) => a !== b);
-      countries = topojson.feature(countries110m, countries110m.objects.countries).features;
-
-      redraw();
-
-      svg.call(d3.drag().on('drag', (event) => {
-        const rotate = projection.rotate();
-        const k = 1 / projection.scale();
-        projection.rotate([
-          rotate[0] + event.dx * k * 150,
-          rotate[1] - event.dy * k * 150
-        ]);
-        redraw();
-      }));
-
-      svg.call(d3.zoom().scaleExtent([200, 800]).on('zoom', (event) => {
-        projection.scale(event.transform.k);
-        redraw();
-      }));
-
-      loopSequence();
-    });
-
-    function redraw(){
-      layerLand.datum(landFeature).attr('d', path);
-      layerBorders.datum(bordersFeature).attr('d', path);
-      layerGraticule.attr('d', path);
-
-      if(countries){
-        const euNames = new Set([
-          "Austria","Belgium","Bulgaria","Croatia","Cyprus","Czechia","Denmark","Estonia","Finland","France","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania","Luxembourg","Malta","Netherlands","Poland","Portugal","Romania","Slovakia","Slovenia","Spain","Sweden"
-        ]);
-
-        const paths = layerCountries.selectAll('path').data(countries);
-        paths.enter().append('path').merge(paths)
-          .attr('d', path)
-          .attr('fill', d => {
-            if (d.properties && (euNames.has(d.properties.name) || d.properties.name === "Indonesia")) {
-              return 'red';
-            }
-            return 'transparent';
-          })
-          .attr('stroke', 'white').attr('stroke-width', 0.3);
-        paths.exit().remove();
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Peta Interaktif & Zoom Otomatis • D3</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #ffffff00;
       }
-
-      // Hitung posisi akurat dengan SVGPoint + getScreenCTM
-      const point = svg.node().createSVGPoint();
-      const coord = projection([104.947022, -4.899062]);
-      if(coord){
-        point.x = coord[0];
-        point.y = coord[1];
-        const screenCTM = svg.node().getScreenCTM();
-        if(screenCTM){
-          const cursorPt = point.matrixTransform(screenCTM);
-          lampungLabel.style.left = cursorPt.x + "px";
-          lampungLabel.style.top = cursorPt.y + "px";
-        }
+      #map-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
       }
-    }
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .lampung-label {
+        position: absolute;
+        font-family: "Roboto Mono", monospace;
+        font-size: 16px;
+        color: black;
+        display: none;
+        white-space: nowrap;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+      }
+    </style>
+    <!-- D3 & TopoJSON via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="map-container">
+      <svg
+        id="map"
+        viewBox="0 0 960 600"
+        preserveAspectRatio="xMidYMid meet"
+      ></svg>
+      <div id="lampung-label" class="lampung-label">Lampung, Indonesia</div>
+    </div>
 
-    function transitionTo(center, scale, duration=2000, showLampung=false){
-      return new Promise(resolve => {
-        lampungLabel.style.display = 'none';
+    <script>
+      (function () {
+        const svg = d3.select("#map");
+        const g = svg.append("g");
 
-        const startRotate = projection.rotate();
-        const startScale = projection.scale();
-        const targetRotate = [-center[0], -center[1]];
+        const width = 960,
+          height = 600;
 
-        const interpRotate = d3.interpolate(startRotate, targetRotate);
-        const interpScale = d3.interpolate(startScale, scale);
+        const projection = d3
+          .geoOrthographic()
+          .translate([width / 2, height / 2])
+          .scale(280)
+          .clipAngle(90);
 
-        d3.transition()
-          .duration(duration)
-          .ease(d3.easeCubicInOut)
-          .tween("zoom", () => t => {
-            projection.rotate(interpRotate(t)).scale(interpScale(t));
+        const path = d3.geoPath(projection);
+
+        const land110mUrl =
+          "https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json";
+        const countries110mUrl =
+          "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+        const layerLand = g
+          .append("path")
+          .attr("fill", "#69d2e7")
+          .attr("stroke", "#333")
+          .attr("stroke-width", 0.5);
+        const layerBorders = g
+          .append("path")
+          .attr("fill", "none")
+          .attr("stroke", "white")
+          .attr("stroke-width", 0.5);
+        const graticule = d3.geoGraticule10();
+        const layerGraticule = g
+          .append("path")
+          .datum(graticule)
+          .attr("fill", "none")
+          .attr("stroke", "#aaa")
+          .attr("stroke-width", 0.5)
+          .attr("stroke-opacity", 0.5);
+        const layerCountries = g.append("g");
+
+        let landFeature, bordersFeature, countries;
+        const lampungLabel = document.getElementById("lampung-label");
+
+        Promise.all([d3.json(land110mUrl), d3.json(countries110mUrl)]).then(
+          ([land110m, countries110m]) => {
+            landFeature = topojson.feature(land110m, land110m.objects.land);
+            bordersFeature = topojson.mesh(
+              countries110m,
+              countries110m.objects.countries,
+              (a, b) => a !== b
+            );
+            countries = topojson.feature(
+              countries110m,
+              countries110m.objects.countries
+            ).features;
+
             redraw();
-          })
-          .on("end", () => {
-            if(showLampung){
-              lampungLabel.style.display = 'block';
+
+            svg.call(
+              d3.drag().on("drag", (event) => {
+                const rotate = projection.rotate();
+                const k = 1 / projection.scale();
+                projection.rotate([
+                  rotate[0] + event.dx * k * 150,
+                  rotate[1] - event.dy * k * 150,
+                ]);
+                redraw();
+              })
+            );
+
+            svg.call(
+              d3
+                .zoom()
+                .scaleExtent([200, 800])
+                .on("zoom", (event) => {
+                  projection.scale(event.transform.k);
+                  redraw();
+                })
+            );
+
+            loopSequence();
+          }
+        );
+
+        function redraw() {
+          layerLand.datum(landFeature).attr("d", path);
+          layerBorders.datum(bordersFeature).attr("d", path);
+          layerGraticule.attr("d", path);
+
+          if (countries) {
+            const euNames = new Set([
+              "Austria",
+              "Belgium",
+              "Bulgaria",
+              "Croatia",
+              "Cyprus",
+              "Czechia",
+              "Denmark",
+              "Estonia",
+              "Finland",
+              "France",
+              "Germany",
+              "Greece",
+              "Hungary",
+              "Ireland",
+              "Italy",
+              "Latvia",
+              "Lithuania",
+              "Luxembourg",
+              "Malta",
+              "Netherlands",
+              "Poland",
+              "Portugal",
+              "Romania",
+              "Slovakia",
+              "Slovenia",
+              "Spain",
+              "Sweden",
+            ]);
+
+            const paths = layerCountries.selectAll("path").data(countries);
+            paths
+              .enter()
+              .append("path")
+              .merge(paths)
+              .attr("d", path)
+              .attr("fill", (d) => {
+                if (
+                  d.properties &&
+                  (euNames.has(d.properties.name) ||
+                    d.properties.name === "Indonesia")
+                ) {
+                  return "red";
+                }
+                return "transparent";
+              })
+              .attr("stroke", "white")
+              .attr("stroke-width", 0.3);
+            paths.exit().remove();
+          }
+
+          // Hitung posisi akurat dengan SVGPoint + getScreenCTM
+          const point = svg.node().createSVGPoint();
+          const coord = projection([104.947022, -4.899062]);
+          if (coord) {
+            point.x = coord[0];
+            point.y = coord[1];
+            const screenCTM = svg.node().getScreenCTM();
+            if (screenCTM) {
+              const cursorPt = point.matrixTransform(screenCTM);
+              lampungLabel.style.left = cursorPt.x + "px";
+              lampungLabel.style.top = cursorPt.y + "px";
             }
-            resolve();
+          }
+        }
+
+        function transitionTo(
+          center,
+          scale,
+          duration = 2000,
+          showLampung = false
+        ) {
+          return new Promise((resolve) => {
+            lampungLabel.style.display = "none";
+
+            const startRotate = projection.rotate();
+            const startScale = projection.scale();
+            const targetRotate = [-center[0], -center[1]];
+
+            const interpRotate = d3.interpolate(startRotate, targetRotate);
+            const interpScale = d3.interpolate(startScale, scale);
+
+            d3.transition()
+              .duration(duration)
+              .ease(d3.easeCubicInOut)
+              .tween("zoom", () => (t) => {
+                projection.rotate(interpRotate(t)).scale(interpScale(t));
+                redraw();
+              })
+              .on("end", () => {
+                if (showLampung) {
+                  lampungLabel.style.display = "block";
+                }
+                resolve();
+              });
           });
-      });
-    }
+        }
 
-    async function loopSequence(){
-      const centerGlobal = [0, 20];
-      const centerEurope = [10, 50];
-      const centerIndonesia = [118, -2];
-      const centerLampung = [104.947022, -4.899062];
+        async function loopSequence() {
+          const centerGlobal = [0, 20];
+          const centerEurope = [10, 50];
+          const centerIndonesia = [118, -2];
+          const centerLampung = [104.947022, -4.899062];
 
-      while(true){
-        await transitionTo(centerGlobal, 280, 2000);
-        await new Promise(r => setTimeout(r, 500));
-        await transitionTo(centerIndonesia, 500, 2000);
-        await new Promise(r => setTimeout(r, 500));
-        await transitionTo(centerLampung, 1200, 2500, true);
-        await new Promise(r => setTimeout(r, 1000));
-        await transitionTo(centerEurope, 450, 2000);
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
-
-  })();
-  </script>
-</body>
+          while (true) {
+            await transitionTo(centerGlobal, 280, 2000);
+            await new Promise((r) => setTimeout(r, 500));
+            await transitionTo(centerIndonesia, 500, 2000);
+            await new Promise((r) => setTimeout(r, 500));
+            await transitionTo(centerLampung, 1200, 2500, true);
+            await new Promise((r) => setTimeout(r, 1000));
+            await transitionTo(centerEurope, 450, 2000);
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+      })();
+    </script>
+  </body>
 </html>
