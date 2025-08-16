@@ -8,13 +8,6 @@
     html, body { height: 100%; margin: 0; background: #f9f9f9; }
     #map-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
     svg { width: 100%; height: 100%; display: block; }
-    .lampung-marker {
-      position: absolute;
-      color: black;
-      font-size: 22px;
-      display: none;
-      pointer-events: none;
-    }
     .lampung-label {
       position: absolute;
       font-family: 'Roboto Mono', monospace;
@@ -23,20 +16,18 @@
       display: none;
       white-space: nowrap;
       pointer-events: none;
+      transform: translate(-50%, -50%);
     }
   </style>
   <!-- D3 & TopoJSON via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="map-container">
     <svg id="map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet"></svg>
-    <i id="lampung-marker" class="fa-solid fa-location-dot lampung-marker"></i>
     <div id="lampung-label" class="lampung-label">Lampung, Indonesia</div>
   </div>
 
@@ -64,7 +55,6 @@
     const layerCountries = g.append('g');
 
     let landFeature, bordersFeature, countries;
-    const lampungMarker = document.getElementById('lampung-marker');
     const lampungLabel = document.getElementById('lampung-label');
 
     Promise.all([
@@ -127,17 +117,14 @@
         const screenCTM = svg.node().getScreenCTM();
         if(screenCTM){
           const cursorPt = point.matrixTransform(screenCTM);
-          lampungMarker.style.left = (cursorPt.x + 5) + "px";
-          lampungMarker.style.top = (cursorPt.y) + "px";
-          lampungLabel.style.left = (cursorPt.x + 25) + "px";
-          lampungLabel.style.top = (cursorPt.y - 5) + "px"; // geser 5px ke atas
+          lampungLabel.style.left = cursorPt.x + "px";
+          lampungLabel.style.top = cursorPt.y + "px";
         }
       }
     }
 
     function transitionTo(center, scale, duration=2000, showLampung=false){
       return new Promise(resolve => {
-        lampungMarker.style.display = 'none';
         lampungLabel.style.display = 'none';
 
         const startRotate = projection.rotate();
@@ -156,7 +143,6 @@
           })
           .on("end", () => {
             if(showLampung){
-              lampungMarker.style.display = 'block';
               lampungLabel.style.display = 'block';
             }
             resolve();
